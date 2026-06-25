@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>とびだせ！めもりロケット</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fdf7ec;
+  --paper:#fffdf7;
+  --ink:#5b4a3f;
+  --ink-soft:#9a8a7d;
+  --blue:#c7e6f7;     --blue-d:#4fa3d6;
+  --green:#c9ecca;    --green-d:#5cb86f;
+  --yellow:#ffe7a6;   --yellow-d:#eaa83a;
+  --pink:#f8d2e2;     --pink-d:#e07eae;
+  --purple:#e0d2f4;   --purple-d:#9c7bd8;
+  --coral:#fbcabe;    --coral-d:#ec7f6a;
+  --line:#5b4a3f;
+  --shadow:0 6px 0 rgba(91,74,63,.10), 0 10px 22px rgba(91,74,63,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Zen Maru Gothic','Hiragino Maru Gothic ProN','BIZ UDPGothic','Yu Gothic UI',sans-serif;
+  background:
+    radial-gradient(circle at 12% 16%, #fff5e0 0, transparent 42%),
+    radial-gradient(circle at 88% 8%, #eaf6ff 0, transparent 40%),
+    var(--bg);
+  color:var(--ink);
+  line-height:1.5;
+  min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  padding:16px 12px;
+}
+
+/* dotted paper texture overlay */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(rgba(91,74,63,.06) 1.4px, transparent 1.4px);
+  background-size:18px 18px;
+}
+
+#app{
+  position:relative;z-index:1;
+  width:100%;max-width:500px;
+  background:var(--paper);
+  border:3px solid var(--line);
+  border-radius:26px 22px 28px 20px;
+  box-shadow:var(--shadow);
+  padding:16px 16px 18px;
+  overflow:hidden;
+}
+
+/* ---------- effect layers ---------- */
+.burst-layer{position:absolute;inset:0;pointer-events:none;z-index:30;}
+.sp{position:absolute;border-radius:50%;animation:sb .7s ease-out forwards;}
+@keyframes sb{from{transform:translate(0,0) scale(1);opacity:1}to{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}
+.fw-particle{position:absolute;width:7px;height:7px;border-radius:50%;animation:fw .9s ease-out forwards;}
+@keyframes fw{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--fdx),var(--fdy)) scale(0);opacity:0}}
+
+.bang{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:32;opacity:0;transition:opacity .12s;}
+.bang-t{
+  font-weight:900;font-size:42px;color:var(--yellow-d);
+  background:var(--paper);border:3px solid var(--line);border-radius:18px 14px 20px 12px;
+  padding:6px 22px;transform:rotate(-6deg);box-shadow:var(--shadow);
+}
+
+.fireworks-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:36;opacity:0;transition:opacity .18s;}
+.fw-box{
+  background:var(--paper);border:3px solid var(--line);border-radius:22px 18px 24px 16px;
+  padding:18px 26px;text-align:center;box-shadow:var(--shadow);transform:rotate(-2deg);
+}
+.fw-msg-t{font-weight:900;font-size:26px;color:var(--pink-d);line-height:1.3;}
+.fw-msg-sub{font-size:14px;color:var(--ink-soft);margin-top:8px;font-weight:700;}
+
+.lv-badge{
+  display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:34;
+  background:var(--yellow);border:3px solid var(--line);border-radius:18px 14px 16px 18px;
+  padding:7px 20px;color:var(--ink);font-size:14px;font-weight:900;white-space:nowrap;
+  box-shadow:var(--shadow);animation:lu .45s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes lu{from{opacity:0;transform:translateX(-50%) scale(.5)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+
+/* ---------- HUD ---------- */
+.hud{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;position:relative;z-index:2;}
+.bdg{
+  background:var(--paper);border:3px solid var(--line);border-radius:16px 12px 14px 16px;
+  padding:6px 12px;font-size:13px;font-weight:900;box-shadow:0 4px 0 rgba(91,74,63,.10);
+}
+.bdg .num{font-size:16px;}
+.bdg.gold{background:var(--yellow);}
+.bdg.fire{background:var(--coral);}
+.lv-info{
+  text-align:center;background:var(--purple);border:3px solid var(--line);
+  border-radius:16px 18px 14px 16px;padding:4px 12px;box-shadow:0 4px 0 rgba(91,74,63,.10);
+}
+.lv-tag{font-size:11px;color:var(--ink-soft);font-weight:700;}
+.lv-name{font-size:14px;font-weight:900;color:var(--purple-d);}
+
+/* ---------- mascot + target ---------- */
+.top-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;position:relative;z-index:2;}
+.mascot{flex:0 0 auto;width:62px;height:62px;}
+.bubble{
+  position:relative;flex:1;background:var(--paper);border:3px solid var(--line);
+  border-radius:18px 18px 18px 6px;padding:8px 12px;box-shadow:0 4px 0 rgba(91,74,63,.10);
+}
+.bubble::before{
+  content:"";position:absolute;left:-13px;bottom:8px;width:14px;height:14px;
+  background:var(--paper);border-left:3px solid var(--line);border-bottom:3px solid var(--line);
+  transform:rotate(45deg);
+}
+.tgt-label{font-size:11px;color:var(--ink-soft);font-weight:700;}
+.tgt-line{display:flex;align-items:baseline;gap:4px;}
+.tgt-num{font-size:30px;font-weight:900;color:var(--blue-d);line-height:1.05;}
+.tgt-unit{font-size:14px;color:var(--ink-soft);font-weight:700;}
+
+/* ---------- progress dots ---------- */
+.prog-dots{display:flex;gap:7px;justify-content:center;margin-bottom:8px;position:relative;z-index:2;}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--paper);border:2.5px solid var(--line);transition:background .25s;}
+.dot.done{background:var(--yellow-d);}
+.dot.cur{background:var(--blue-d);}
+
+/* ---------- scene (rocket flies) ---------- */
+.scene{position:relative;height:96px;z-index:2;overflow:hidden;margin-bottom:6px;}
+.cloud{position:absolute;border-radius:50%;background:rgba(255,255,255,.85);}
+.rw{position:absolute;bottom:6px;transition:left .7s cubic-bezier(.34,1.56,.64,1);z-index:5;}
+.flame-el{
+  position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+  width:14px;height:18px;background:radial-gradient(ellipse at top,#ffd166,#ff8c42,transparent 80%);
+  border-radius:0 0 50% 50%;animation:fl .15s infinite alternate;
+}
+@keyframes fl{from{height:13px}to{height:21px}}
+
+/* ---------- number line gauge ---------- */
+.gauge{position:relative;z-index:2;margin-bottom:8px;}
+.gauge-lbl{
+  display:inline-block;font-size:12px;color:var(--ink);font-weight:700;
+  background:var(--green);border:2.5px solid var(--line);border-radius:14px 10px 12px 14px;
+  padding:3px 12px;margin:0 auto 8px;text-align:center;
+}
+.gauge-lbl-wrap{text-align:center;}
+.nl{
+  position:relative;height:78px;background:var(--paper);
+  border:3px solid var(--line);border-radius:16px 12px 16px 14px;
+}
+.nl-track{position:absolute;bottom:26px;left:20px;right:20px;height:5px;background:rgba(91,74,63,.18);border-radius:3px;}
+.nl-fill{height:100%;background:var(--blue-d);border-radius:3px;transition:width .7s ease;width:0;}
+.ticks{position:absolute;bottom:0;left:20px;right:20px;height:78px;}
+.tick{position:absolute;bottom:0;width:9%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;cursor:pointer;padding-bottom:4px;transition:transform .1s;}
+.tick:hover .tm{background:var(--yellow-d);}
+.tick:active{transform:translateX(-50%) scale(.86);}
+.tm{width:3px;border-radius:3px;background:rgba(91,74,63,.4);margin-bottom:4px;transition:background .2s;}
+.tick.maj .tm{width:4px;background:var(--line);}
+.tn{font-size:11px;color:var(--ink-soft);font-weight:700;white-space:nowrap;}
+.tick.maj .tn{font-size:12px;color:var(--ink);font-weight:900;}
+
+/* ---------- feedback ---------- */
+.fb-area{min-height:48px;display:flex;align-items:center;justify-content:center;position:relative;z-index:2;}
+.fb{
+  text-align:center;font-size:14px;font-weight:700;width:100%;line-height:1.5;
+  background:var(--paper);border:3px solid var(--line);border-radius:16px 14px 18px 12px;
+  padding:9px 14px;box-shadow:0 4px 0 rgba(91,74,63,.10);animation:fi .3s ease;
+}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.fb.ok{background:var(--green);color:var(--green-d);}
+.fb.ng{background:var(--coral);color:var(--coral-d);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="burst-layer" id="burst"></div>
+  <div class="bang" id="bang"><div class="bang-t">ドカーン！</div></div>
+  <div class="fireworks-msg" id="fwmsg">
+    <div class="fw-box">
+      <div class="fw-msg-t">★ 100ポイント ★<br>はなびが あがった！</div>
+      <div class="fw-msg-sub" id="fwsub"></div>
+    </div>
+  </div>
+  <div class="lv-badge" id="lvbadge"></div>
+
+  <div class="hud">
+    <div class="bdg gold">★ <span class="num" id="score">0</span></div>
+    <div class="lv-info">
+      <div class="lv-tag" id="lv-tag">レベル 1</div>
+      <div class="lv-name" id="lv-name">10めもり</div>
+    </div>
+    <div class="bdg fire">🔥 <span class="num" id="streak">0</span></div>
+  </div>
+
+  <div class="top-row">
+    <svg class="mascot" id="mascot" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="34" r="24" fill="#ffe7a6" stroke="#5b4a3f" stroke-width="3"/>
+      <circle cx="24" cy="32" r="3.4" fill="#5b4a3f" id="eyeL"/>
+      <circle cx="40" cy="32" r="3.4" fill="#5b4a3f" id="eyeR"/>
+      <circle cx="20" cy="40" r="3.6" fill="#fbcabe"/>
+      <circle cx="44" cy="40" r="3.6" fill="#fbcabe"/>
+      <path id="mouth" d="M26 42 Q32 48 38 42" fill="none" stroke="#5b4a3f" stroke-width="3" stroke-linecap="round"/>
+      <path d="M18 14 L24 24" stroke="#5b4a3f" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="17" cy="12" r="3.5" fill="#ec7f6a" stroke="#5b4a3f" stroke-width="2.5"/>
+    </svg>
+    <div class="bubble">
+      <div class="tgt-label">めざせ このかず！</div>
+      <div class="tgt-line"><span class="tgt-num" id="tgt">--</span><span class="tgt-unit"> km</span></div>
+    </div>
+  </div>
+
+  <div class="prog-dots" id="dots"></div>
+
+  <div class="scene" id="scene">
+    <div class="rw" id="rw" style="left:6%">
+      <svg width="38" height="56" viewBox="0 0 36 54" xmlns="http://www.w3.org/2000/svg">
+        <path id="rb" d="M18 2C11 12 9 24 9 36L27 36C27 24 25 12 18 2Z" fill="#c7e6f7" stroke="#5b4a3f" stroke-width="2.5"/>
+        <circle cx="18" cy="17" r="5.4" fill="#fffdf7" stroke="#5b4a3f" stroke-width="2"/>
+        <circle cx="18" cy="17" r="2.6" fill="#4fa3d6"/>
+        <path id="rfl" d="M9 36L3 47L9 44Z" fill="#fbcabe" stroke="#5b4a3f" stroke-width="2"/>
+        <path id="rfr" d="M27 36L33 47L27 44Z" fill="#fbcabe" stroke="#5b4a3f" stroke-width="2"/>
+        <rect id="rfb" x="11" y="42" width="14" height="9" rx="3" fill="#fbcabe" stroke="#5b4a3f" stroke-width="2"/>
+      </svg>
+      <div class="flame-el" id="flame"></div>
+    </div>
+  </div>
+
+  <div class="gauge">
+    <div class="gauge-lbl-wrap"><span class="gauge-lbl" id="gauge-lbl">めもりを タップ！</span></div>
+    <div class="nl" id="nl">
+      <div class="nl-track"><div class="nl-fill" id="nlf"></div></div>
+      <div class="ticks" id="ticks"></div>
+    </div>
+  </div>
+
+  <div class="fb-area"><div class="fb" id="fb">もくひょうの めもりを タップしてみよう！</div></div>
+</div>
+
+<script>
+const PHASES=[
+  {name:"10めもり",  step:10, tickCount:11, minZero:true,  hint:"10、20、30…とかぞえよう"},
+  {name:"5めもり",   step:5,  tickCount:11, minZero:true,  hint:"5、10、15…とかぞえよう"},
+  {name:"1めもり",   step:1,  tickCount:11, minZero:true,  hint:"1、2、3…とかぞえよう"},
+  {name:"10めもり★", step:10, tickCount:11, minZero:false, hint:"10、20、30…とかぞえよう"},
+  {name:"5めもり★",  step:5,  tickCount:11, minZero:false, hint:"5、10、15…とかぞえよう"},
+  {name:"1めもり★",  step:1,  tickCount:11, minZero:false, hint:"1、2、3…とかぞえよう"},
+];
+const NEED=5;
+let phaseIdx=0,correctInPhase=0,score=0,prevScore=0,streak=0,locked=false;
+let target=0,prevTarget=-1;
+let rangeMin=0,rangeMax=100;
+let fireworksActive=false;
+
+function buildPhaseRange(){
+  const ph=PHASES[phaseIdx];
+  if(ph.minZero){
+    rangeMin=0;rangeMax=ph.step*(ph.tickCount-1);
+  } else {
+    const bases=[100,200,300,150,250,350,120,230,400,480];
+    rangeMin=bases[Math.floor(Math.random()*bases.length)];
+    rangeMax=rangeMin+ph.step*(ph.tickCount-1);
+  }
+}
+
+function pickTarget(){
+  const ph=PHASES[phaseIdx];
+  const vals=[];
+  for(let v=rangeMin;v<=rangeMax;v+=ph.step){if(v!==rangeMin)vals.push(v);}
+  if(correctInPhase===0)return rangeMin+ph.step;
+  let t,tries=0;
+  do{t=vals[Math.floor(Math.random()*vals.length)];tries++;}while(t===prevTarget&&tries<20);
+  return t;
+}
+
+function buildClouds(){
+  const sc=document.getElementById('scene');
+  const specs=[[10,10,24,14],[70,22,30,16],[44,4,20,12]];
+  specs.forEach(([l,t,w,h])=>{
+    const c=document.createElement('div');c.className='cloud';
+    c.style.cssText=`left:${l}%;top:${t}px;width:${w}px;height:${h}px;`;
+    sc.appendChild(c);
+  });
+}
+
+function buildDots(){
+  const el=document.getElementById('dots');el.innerHTML='';
+  for(let i=0;i<NEED;i++){
+    const d=document.createElement('div');
+    d.className='dot'+(i<correctInPhase?' done':i===correctInPhase?' cur':'');
+    el.appendChild(d);
+  }
+}
+
+function buildTicks(){
+  const ph=PHASES[phaseIdx];
+  const tc=document.getElementById('ticks');tc.innerHTML='';
+  const n=ph.tickCount;
+  const majEvery=ph.step>=10?2:ph.step>=5?2:10;
+  let i=0;
+  for(let v=rangeMin;v<=rangeMax;v+=ph.step){
+    const isMaj=(v===rangeMin||v===rangeMax||(v-rangeMin)%(ph.step*majEvery)===0);
+    const item=document.createElement('div');
+    item.className='tick'+(isMaj?' maj':'');item.dataset.v=v;
+    item.style.left=(i/(n-1)*100)+'%';
+    const tm=document.createElement('div');tm.className='tm';tm.style.height=isMaj?'16px':'10px';
+    const tn=document.createElement('div');tn.className='tn';tn.textContent=isMaj?v:'';
+    item.appendChild(tm);item.appendChild(tn);
+    item.addEventListener('click',()=>onTick(v));
+    tc.appendChild(item);
+    i++;
+  }
+}
+
+function moveRocket(v){
+  const pct=(v-rangeMin)/(rangeMax-rangeMin);
+  const nl=document.getElementById('nl');
+  const app=document.getElementById('app');
+  const rw=document.getElementById('rw');
+  const nlRect=nl.getBoundingClientRect();
+  const appRect=app.getBoundingClientRect();
+  const border=3,pad=20;                       // nlの枠線 と track/ticks の内側余白
+  const trackLeft=nlRect.left+border+pad;       // ビューポート座標での目盛り左端
+  const trackWidth=nlRect.width-border*2-pad*2; // 目盛り領域の幅
+  const xView=trackLeft+pct*trackWidth;         // 目盛りvの中心(ビューポート座標)
+  const rocketHalf=rw.offsetWidth/2||19;        // ロケットの中心を点に合わせる
+  const leftPx=xView-(appRect.left+border)-rocketHalf; // #appのpadding boxからの位置
+  rw.style.left=leftPx+'px';
+  document.getElementById('nlf').style.width=(pct*100)+'%';
+}
+
+function spawnBurst(){
+  const c=document.getElementById('burst');
+  const app=document.getElementById('app');
+  const r=app.getBoundingClientRect();
+  const cx=r.width/2,cy=r.height*.34;
+  const cols=['#eaa83a','#ec7f6a','#4fa3d6','#e07eae','#5cb86f','#9c7bd8'];
+  for(let i=0;i<22;i++){
+    const p=document.createElement('div');p.className='sp';
+    const sz=6+Math.random()*7;
+    const a=(Math.PI*2/22)*i,d=45+Math.random()*65;
+    p.style.cssText=`width:${sz}px;height:${sz}px;background:${cols[i%cols.length]};left:${cx}px;top:${cy}px;--dx:${Math.cos(a)*d}px;--dy:${Math.sin(a)*d}px;animation-duration:${.5+Math.random()*.3}s`;
+    c.appendChild(p);setTimeout(()=>p.remove(),900);
+  }
+}
+
+function spawnFireworks(){
+  if(fireworksActive)return;
+  fireworksActive=true;
+  const c=document.getElementById('burst');
+  const app=document.getElementById('app');
+  const r=app.getBoundingClientRect();
+  const cols=['#eaa83a','#ec7f6a','#4fa3d6','#e07eae','#5cb86f','#9c7bd8','#ffd166'];
+  function oneShot(){
+    const cx=r.width*(.15+Math.random()*.7);
+    const cy=r.height*(.1+Math.random()*.5);
+    for(let i=0;i<28;i++){
+      const p=document.createElement('div');p.className='fw-particle';
+      const a=(Math.PI*2/28)*i,d=30+Math.random()*80;
+      p.style.cssText=`background:${cols[Math.floor(Math.random()*cols.length)]};left:${cx}px;top:${cy}px;--fdx:${Math.cos(a)*d}px;--fdy:${Math.sin(a)*d}px;animation-duration:${.7+Math.random()*.4}s`;
+      c.appendChild(p);setTimeout(()=>p.remove(),1200);
+    }
+  }
+  [0,300,600,900,1200,1500,1800].forEach(t=>setTimeout(oneShot,t));
+  const fwmsg=document.getElementById('fwmsg');
+  const fwsub=document.getElementById('fwsub');
+  fwsub.textContent='あと'+((Math.floor(score/100)+1)*100-score)+'ポイントで つぎの はなび！';
+  fwmsg.style.opacity='1';
+  setTimeout(()=>{fwmsg.style.opacity='0';fireworksActive=false;},2200);
+}
+
+function setFb(msg,type=''){
+  const el=document.getElementById('fb');el.textContent=msg;el.className='fb '+type;
+}
+
+function setMascot(mood){
+  const mouth=document.getElementById('mouth');
+  const eyeL=document.getElementById('eyeL'),eyeR=document.getElementById('eyeR');
+  if(mood==='happy'){
+    mouth.setAttribute('d','M24 41 Q32 52 40 41');
+    eyeL.setAttribute('r','3.8');eyeR.setAttribute('r','3.8');
+  }else if(mood==='oops'){
+    mouth.setAttribute('d','M26 47 Q32 41 38 47');
+    eyeL.setAttribute('r','3');eyeR.setAttribute('r','3');
+  }else{
+    mouth.setAttribute('d','M26 42 Q32 48 38 42');
+    eyeL.setAttribute('r','3.4');eyeR.setAttribute('r','3.4');
+  }
+}
+
+function updateRocketStyle(){
+  const cols=[['#c7e6f7','#fbcabe'],['#c9ecca','#ffe7a6'],['#ffe7a6','#fbcabe'],['#f8d2e2','#ffd166']];
+  const lv2=streak>=10?3:streak>=6?2:streak>=3?1:0;
+  const [bc,fc]=cols[lv2];
+  document.getElementById('rb').setAttribute('fill',bc);
+  ['rfl','rfr','rfb'].forEach(id=>document.getElementById(id).setAttribute('fill',fc));
+  if([3,6,10].includes(streak)){
+    const b=document.getElementById('lvbadge');
+    b.textContent=lv2===1?'ロケット しんか！':lv2===2?'スーパーロケット！':'ウルトラロケット！！';
+    b.style.display='block';setTimeout(()=>b.style.display='none',2000);
+  }
+}
+
+function newQuestion(){
+  locked=false;
+  target=pickTarget();
+  prevTarget=target;
+  document.getElementById('tgt').textContent=target;
+  document.getElementById('lv-tag').textContent='レベル '+(phaseIdx+1);
+  document.getElementById('lv-name').textContent=PHASES[phaseIdx].name;
+  document.getElementById('gauge-lbl').textContent=target+' の めもりを さがそう！';
+  setMascot('normal');
+  buildTicks();buildDots();
+  requestAnimationFrame(()=>moveRocket(rangeMin));
+  setFb('もくひょうの めもりを タップしてみよう！');
+}
+
+function onTick(v){
+  if(locked)return;
+  moveRocket(v);
+  if(v===target){
+    locked=true;streak++;
+    const gained=10+streak*2;
+    prevScore=score;
+    score+=gained;
+    correctInPhase++;
+    document.getElementById('score').textContent=score;
+    document.getElementById('streak').textContent=streak;
+    const bang=document.getElementById('bang');
+    bang.style.opacity='1';setTimeout(()=>bang.style.opacity='0',600);
+    spawnBurst();updateRocketStyle();setMascot('happy');
+    if(Math.floor(prevScore/100)<Math.floor(score/100)){
+      setTimeout(spawnFireworks,700);
+    }
+    const msgs=['せいかい！やったー！','すごい！かんぺき！','ドンピシャ！さすが！','うわー！すばらしい！','ぴったり！さいこう！'];
+    setFb(msgs[Math.floor(Math.random()*msgs.length)],'ok');
+    if(correctInPhase>=NEED){
+      if(phaseIdx<PHASES.length-1){
+        phaseIdx++;correctInPhase=0;
+        buildPhaseRange();
+        setTimeout(()=>{
+          const b=document.getElementById('lvbadge');
+          b.textContent='レベルアップ！ '+PHASES[phaseIdx].name+' へ！';
+          b.style.display='block';setTimeout(()=>b.style.display='none',2200);
+          setFb('レベルアップ！ '+PHASES[phaseIdx].name+' に チャレンジ！','ok');
+          setTimeout(newQuestion,1400);
+        },900);
+      } else {
+        correctInPhase=0;
+        buildPhaseRange();
+        setTimeout(()=>{setFb('ぜんぶ クリア！ さらに つづけよう！','ok');setTimeout(newQuestion,1200);},900);
+      }
+    } else {
+      setTimeout(newQuestion,1000);
+    }
+  } else {
+    streak=0;document.getElementById('streak').textContent=0;
+    document.getElementById('flame').style.display='none';
+    setTimeout(()=>document.getElementById('flame').style.display='',500);
+    setFb(PHASES[phaseIdx].hint+'！ いっしょに かぞえよう','ng');
+    setMascot('oops');
+    updateRocketStyle();
+  }
+}
+
+buildClouds();buildPhaseRange();newQuestion();
+</script>
+</body>
+</html>
